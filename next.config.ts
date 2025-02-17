@@ -6,7 +6,7 @@ const nextConfig = {
     return [
       {
         source: '/api/ask',
-        destination: 'https://walrus-app-xeiqk.ondigitalocean.app/ask',
+        destination: 'https://clownfish-app-sawhl.ondigitalocean.app/ask',
       },
     ];
   },

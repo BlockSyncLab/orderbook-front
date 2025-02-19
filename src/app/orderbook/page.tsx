@@ -5,7 +5,7 @@ import { useState, useEffect } from 'react';
 // Define o endereço base da API a partir de uma variável de ambiente.
 // Caso a variável não esteja definida, usa como padrão o localhost.
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-// http://192.168.0.3:3001
+
 //http://localhost:3001
 
 interface BackendOrder {

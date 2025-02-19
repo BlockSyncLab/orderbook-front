@@ -43,7 +43,7 @@ export default function OrderbookPage() {
   const [price, setPrice] = useState(''); 
   const [quantity, setQuantity] = useState('');
   const [type, setType] = useState<'buy' | 'sell'>('buy');
-  const [asset, setAsset] = useState<'flop' | 'hype'>('flop');
+  const [asset, setAsset] = useState<'hype' | 'flop'>('flop');
   const [execution, setExecution] = useState<'limit' | 'market'>('limit');
   const [error, setError] = useState<string | null>(null);
   const [marketResult, setMarketResult] = useState<MarketOrderResult | null>(null);
@@ -192,7 +192,6 @@ export default function OrderbookPage() {
           {orders
             .filter(
               (order) =>
-                order.asset &&
                 order.asset.toLowerCase() === assetType &&
                 order.type === 'sell'
             )
@@ -211,7 +210,6 @@ export default function OrderbookPage() {
           {orders
             .filter(
               (order) =>
-                order.asset &&
                 order.asset.toLowerCase() === assetType &&
                 order.type === 'buy'
             )
@@ -258,79 +256,56 @@ export default function OrderbookPage() {
               <option value="flop">FLOP</option>
             </select>
           </div>
-          <div className="flex flex-col gap-4">
-            {execution === 'limit' && (
-              <>
-                <div>
-                  <label>Preço</label>
-                  <input
-                    type="number"
-                    value={price}
-                    onChange={(e) => setPrice(e.target.value)}
-                    className="border p-2 rounded-lg w-full"
-                  />
-                </div>
-                <div>
-                  <label>{type === 'buy' ? 'Valor' : 'Shares'}</label>
-                  <input
-                    type="number"
-                    value={quantity}
-                    onChange={(e) => setQuantity(e.target.value)}
-                    className="border p-2 rounded-lg w-full"
-                  />
-                </div>
-              </>
-            )}
-            {execution === 'market' && (
-              <div>
-                <label>{type === 'buy' ? 'Montante' : 'Quantidade de shares'}</label>
-                <input
-                  type="number"
-                  value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
-                  className="border p-2 rounded-lg w-full"
-                />
-              </div>
-            )}
-          </div>
+          <input
+            type="text"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            placeholder="Preço"
+            className="border p-2 rounded-lg"
+          />
+          <input
+            type="text"
+            value={quantity}
+            onChange={(e) => setQuantity(e.target.value)}
+            placeholder="Quantidade"
+            className="border p-2 rounded-lg"
+          />
           <button
             onClick={handleAddOrder}
-            className="w-full bg-blue-500 text-white p-2 rounded-lg mt-4"
+            className="bg-blue-500 text-white py-2 px-4 rounded-lg"
           >
             Adicionar Ordem
           </button>
-          {error && <p className="text-red-500 mt-4">{error}</p>}
-          {marketResult && (
-            <div className="bg-gray-200 p-4 mt-4 rounded-lg">
-              <h3 className="font-bold">Resultado da Ordem a Mercado</h3>
-              {marketResult.priceFinal && <p>Preço final: R$ {marketResult.priceFinal}</p>}
-              {marketResult.totalShares && <p>Total de shares: {marketResult.totalShares}</p>}
-              {marketResult.priceImpact && <p>Impacto no preço: {marketResult.priceImpact}</p>}
-            </div>
-          )}
-          {executionResult && (
-            <div className="bg-gray-200 p-4 mt-4 rounded-lg">
-              <h3 className="font-bold">Resultado da Execução de Ordem</h3>
-              <p>Ordem executada com sucesso!</p>
-              <p>ID da nova ordem: {executionResult.newOrderId}</p>
-              <p>Shares executadas: {executionResult.executedShares}</p>
-              <p>Preço médio: R$ {executionResult.averagePrice}</p>
-            </div>
-          )}
+          {error && <div className="text-red-500">{error}</div>}
         </div>
-        <div className="mt-8">
-          <h2 className="font-semibold text-xl">Histórico de Execuções</h2>
+        <div className="flex gap-8">
+          {renderOrderbook('flop')}
+          {renderOrderbook('hype')}
+        </div>
+        {marketResult && (
+          <div className="p-4 mt-4 border bg-white">
+            <h3 className="text-xl font-semibold">Resultado da Ordem</h3>
+            <div>Shares: {marketResult.totalShares}</div>
+            <div>Preço Final: {marketResult.priceFinal}</div>
+            <div>Impacto: {marketResult.priceImpact}</div>
+          </div>
+        )}
+        {executionResult && (
+          <div className="p-4 mt-4 border bg-white">
+            <h3 className="text-xl font-semibold">Resultado da Execução</h3>
+            <div>ID Ordem: {executionResult.newOrderId}</div>
+            <div>Shares Executados: {executionResult.executedShares}</div>
+            <div>Preço Médio: {executionResult.averagePrice}</div>
+          </div>
+        )}
+        <div className="mt-4">
+          <h3 className="font-bold">Histórico de Execuções</h3>
           <ul>
             {history.map((msg, idx) => (
-              <li key={idx} className="my-2">{msg}</li>
+              <li key={idx} className="text-sm">{msg}</li>
             ))}
           </ul>
         </div>
-      </div>
-      <div className="w-1/2 bg-gray-50 p-4">
-        <h2 className="text-2xl font-semibold text-center">Livro de Ordens</h2>
-        {renderOrderbook('hype')}
-        {renderOrderbook('flop')}
       </div>
     </div>
   );

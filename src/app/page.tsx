@@ -37,12 +37,9 @@ export default function OrderbookPage() {
   const [orders, setOrders] = useState<BackendOrder[]>([]);
   const [price, setPrice] = useState('');
   const [quantity, setQuantity] = useState('');
-  const [type, setType] = useState<'buy' | 'sell'>('buy');
   const [asset, setAsset] = useState<'flop' | 'hype'>('flop');
   const [execution, setExecution] = useState<'limit' | 'market'>('limit');
   const [error, setError] = useState<string | null>(null);
-  const [marketResult, setMarketResult] = useState<MarketOrderResult | null>(null);
-  const [executionResult, setExecutionResult] = useState<MatchingResult | null>(null);
   const [history, setHistory] = useState<string[]>([]);
 
   const fetchOrders = async () => {
@@ -61,8 +58,6 @@ export default function OrderbookPage() {
 
   const handleAddOrder = async () => {
     setError(null);
-    setMarketResult(null);
-    setExecutionResult(null);
 
     if (execution === 'limit') {
       const numericPrice = parseFloat(price);
@@ -72,13 +67,13 @@ export default function OrderbookPage() {
         return;
       }
 
-      const endpoint = type === 'buy' ? 'buy' : 'sell';
+      const endpoint = 'buy' || 'sell'; // Ajuste condicional para o tipo da ordem
       const payload: Record<string, unknown> = {
         asset: asset.toUpperCase(),
         price: numericPrice,
       };
 
-      if (type === 'buy') {
+      if (endpoint === 'buy') {
         payload['amount'] = numericQuantity;
       } else {
         payload['shares'] = numericQuantity;
@@ -100,31 +95,6 @@ export default function OrderbookPage() {
           return;
         }
         fetchOrders();
-
-        if (result.hasOwnProperty('trades')) {
-          setExecutionResult(result as MatchingResult);
-          let msg = `Matching: Ordem ${result.newOrderId} executada, ${result.executedShares} shares a preço médio R$ ${result.averagePrice}.`;
-          if ((result as MatchingResult).trades.length > 0) {
-            msg += " Trades: " + (result as MatchingResult).trades
-              .map((trade) =>
-                trade.sellOrderId
-                  ? `Venda ${trade.sellOrderId}: ${trade.executedShares} @ ${trade.price}`
-                  : `Compra ${trade.buyOrderId}: ${trade.executedShares} @ ${trade.price}`
-              )
-              .join(" | ");
-          }
-          setHistory(prev => [...prev, msg]);
-
-          if ((result as MatchingResult).remainingOrder) {
-            const remMsg = `Ordem remanescente inserida: ID ${(result as MatchingResult).remainingOrder.id}, ${(result as MatchingResult).remainingOrder.shares} shares a R$ ${(result as MatchingResult).remainingOrder.price}.`;
-            setHistory(prev => [...prev, remMsg]);
-          }
-        } else {
-          setHistory(prev => [
-            ...prev,
-            `Ordem de ${type} inserida: ID ${result.newOrderId}, ${result.shares} shares a R$ ${result.price}.`
-          ]);
-        }
         setPrice('');
         setQuantity('');
       } catch (err) {
@@ -162,7 +132,6 @@ export default function OrderbookPage() {
           return;
         }
         console.log('Resultado da ordem a mercado:', result);
-        setMarketResult(result);
         let msg = '';
         if (type === 'buy') {
           msg = `Ordem a mercado executada: ${result.totalShares} shares a preço final R$ ${result.priceFinal}`;

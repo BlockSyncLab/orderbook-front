@@ -11,14 +11,6 @@ interface BackendOrder {
   price: number;
   amount: number;
   shares: number;
-  potentialGain?: number;
-}
-
-interface MarketOrderResult {
-  totalShares?: number;
-  priceFinal?: number;
-  priceImpact?: number;
-  error?: string;
 }
 
 interface Trade {
@@ -33,42 +25,20 @@ interface MatchingResult {
   executedShares: number;
   averagePrice: number;
   trades: Trade[];
-  remainingOrder: BackendOrder | null;
 }
 
 export default function OrderbookPage() {
-  const [orders, setOrders] = useState<BackendOrder[]>([]);
   const [price, setPrice] = useState("");
   const [quantity, setQuantity] = useState("");
   const [type, setType] = useState<"buy" | "sell">("buy");
   const [asset, setAsset] = useState<"hype" | "flop">("flop");
-  const [execution, setExecution] = useState<"limit" | "market">("limit");
   const [error, setError] = useState<string | null>(null);
-  const [marketResult, setMarketResult] = useState<MarketOrderResult | null>(
-    null
-  );
   const [executionResult, setExecutionResult] = useState<MatchingResult | null>(
     null
   );
-  const [history, setHistory] = useState<string[]>([]);
-
-  useEffect(() => {
-    fetchOrders();
-  }, []);
-
-  const fetchOrders = async () => {
-    try {
-      const response = await fetch(`${API_BASE_URL}/orders`);
-      const data = await response.json();
-      setOrders(data);
-    } catch (err) {
-      console.error("Erro ao buscar ordens:", err);
-    }
-  };
 
   const handleAddOrder = async () => {
     setError(null);
-    setMarketResult(null);
     setExecutionResult(null);
 
     const numericPrice = parseFloat(price);
@@ -79,21 +49,12 @@ export default function OrderbookPage() {
     }
 
     const endpoint = type === "buy" ? "buy" : "sell";
-    const payload: {
-      asset: string;
-      price: number;
-      amount?: number;
-      shares?: number;
-    } = {
+    const payload = {
       asset: asset.toUpperCase(),
       price: numericPrice,
+      amount: type === "buy" ? numericQuantity : undefined,
+      shares: type === "sell" ? numericQuantity : undefined,
     };
-
-    if (type === "buy") {
-      payload.amount = numericQuantity;
-    } else {
-      payload.shares = numericQuantity;
-    }
 
     try {
       const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
@@ -106,7 +67,6 @@ export default function OrderbookPage() {
         setError(result.error || "Erro ao adicionar ordem.");
         return;
       }
-      fetchOrders();
       setExecutionResult(result);
     } catch (err) {
       console.error("Erro ao adicionar ordem:", err);
@@ -142,7 +102,6 @@ export default function OrderbookPage() {
           {error && <div className="text-red-500">{error}</div>}
         </div>
 
-        {/* Exibir resultado da execução */}
         {executionResult && (
           <div className="mt-4 p-4 border rounded bg-white">
             <h2 className="text-lg font-semibold">Resultado da Execução</h2>
@@ -153,7 +112,7 @@ export default function OrderbookPage() {
               <div className="mt-2">
                 <h3 className="font-semibold">Trades:</h3>
                 <ul className="list-disc pl-4">
-                  {executionResult.trades.map((trade: Trade) => (
+                  {executionResult.trades.map((trade) => (
                     <li key={trade.buyOrderId || trade.sellOrderId}>
                       {trade.sellOrderId
                         ? `Venda ${trade.sellOrderId}: ${trade.executedShares} @ ${trade.price}`

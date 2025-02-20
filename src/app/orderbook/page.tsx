@@ -2,19 +2,15 @@
 
 import { useState, useEffect } from 'react';
 
-// Define o endereço base da API a partir de uma variável de ambiente.
-// Caso a variável não esteja definida, usa como padrão o localhost.
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-// http://192.168.0.3:3001
-//http://localhost:3001
 
 interface BackendOrder {
   id: number;
   type: 'buy' | 'sell';
   asset: 'HYPE' | 'FLOP';
   price: number;
-  amount: number; // Para compras: valor investido; para vendas: ganho potencial
-  shares: number; // Quantidade de shares
+  amount: number;
+  shares: number;
   potentialGain?: number;
 }
 
@@ -25,14 +21,11 @@ interface MarketOrderResult {
   error?: string;
 }
 
-/**
- * Interface para o resultado do matching (para ordens limite que encontram ordens opostas).
- */
 interface MatchingResult {
   newOrderId: number;
   executedShares: number;
   averagePrice: number;
-  trades: any[];
+  trades: Array<{ buyOrderId: number; sellOrderId: number; price: number; executedShares: number }>;
   remainingOrder: BackendOrder | null;
 }
 
@@ -48,7 +41,6 @@ export default function OrderbookPage() {
   const [executionResult, setExecutionResult] = useState<MatchingResult | null>(null);
   const [history, setHistory] = useState<string[]>([]);
 
-  // Função para buscar as ordens ativas do back-end
   const fetchOrders = async () => {
     try {
       const response = await fetch(`${API_BASE_URL}/orders`);
@@ -77,15 +69,15 @@ export default function OrderbookPage() {
       }
 
       const endpoint = type === 'buy' ? 'buy' : 'sell';
-      let payload: any = {
-        asset: asset.toUpperCase(), // "FLOP" ou "HYPE"
+      const payload: Record<string, unknown> = {
+        asset: asset.toUpperCase(),
         price: numericPrice,
       };
 
       if (type === 'buy') {
-        payload.amount = numericQuantity;
+        payload['amount'] = numericQuantity;
       } else {
-        payload.shares = numericQuantity;
+        payload['shares'] = numericQuantity;
       }
 
       try {
@@ -94,21 +86,19 @@ export default function OrderbookPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
-        const result = await response.json();
+        const result: MatchingResult = await response.json();
         if (!response.ok) {
           setError(result.error || 'Erro ao adicionar ordem.');
           return;
         }
-        // Atualiza o orderbook após a operação
         fetchOrders();
 
         if (result.trades) {
-          // Resultado de matching (ordem limite executada contra ordens opostas)
           setExecutionResult(result);
           let msg = `Matching: Ordem ${result.newOrderId} executada, ${result.executedShares} shares a preço médio R$ ${result.averagePrice}.`;
           if (result.trades.length > 0) {
             msg += " Trades: " + result.trades
-              .map((trade: any) =>
+              .map((trade) =>
                 trade.sellOrderId
                   ? `Venda ${trade.sellOrderId}: ${trade.executedShares} @ ${trade.price}`
                   : `Compra ${trade.buyOrderId}: ${trade.executedShares} @ ${trade.price}`
@@ -117,16 +107,14 @@ export default function OrderbookPage() {
           }
           setHistory(prev => [...prev, msg]);
 
-          // Se houver ordem remanescente, registra no histórico
           if (result.remainingOrder) {
             const remMsg = `Ordem remanescente inserida: ID ${result.remainingOrder.id}, ${result.remainingOrder.shares} shares a R$ ${result.remainingOrder.price}.`;
             setHistory(prev => [...prev, remMsg]);
           }
         } else {
-          // Ordem limite inserida sem matching imediato
           setHistory(prev => [
             ...prev,
-            `Ordem de ${type} inserida: ID ${result.id}, ${result.shares} shares a R$ ${result.price}.`
+            `Ordem de ${type} inserida: ID ${result.newOrderId}, ${result.shares} shares a R$ ${result.price}.`
           ]);
         }
         setPrice('');
@@ -136,7 +124,6 @@ export default function OrderbookPage() {
         setError('Erro ao adicionar ordem.');
       }
     } else if (execution === 'market') {
-      // Ordem a mercado (suporta compra e venda)
       const numericValue = parseFloat(quantity);
       if (isNaN(numericValue)) {
         setError(type === 'buy'
@@ -145,14 +132,14 @@ export default function OrderbookPage() {
         return;
       }
       let endpoint = '';
-      let payload: any = {};
+      const payload: Record<string, unknown> = {};
 
       if (type === 'buy') {
         endpoint = asset === 'hype' ? 'market-buy-hype' : 'market-buy-flop';
-        payload = { amount: numericValue };
+        payload['amount'] = numericValue;
       } else if (type === 'sell') {
         endpoint = asset === 'hype' ? 'market-sell-hype' : 'market-sell-flop';
-        payload = { shares: numericValue };
+        payload['shares'] = numericValue;
       }
 
       try {
@@ -175,7 +162,7 @@ export default function OrderbookPage() {
             msg += `, Impacto: ${result.priceImpact}`;
           }
         } else {
-          msg = `Ordem a mercado de venda executada: ${result.executedShares} shares vendidas por um total de R$ ${result.totalRevenue} (preço médio R$ ${result.averagePrice})`;
+          msg = `Ordem a mercado de venda executada: ${result.totalShares} shares vendidas por um total de R$ ${result.totalRevenue} (preço médio R$ ${result.priceFinal})`;
         }
         setHistory(prev => [...prev, msg]);
         setQuantity('');
@@ -187,8 +174,6 @@ export default function OrderbookPage() {
     }
   };
 
-  // Renderiza o orderbook para um ativo (flop ou hype)
-  // As ordens de venda aparecem primeiro, seguidas pelas de compra.
   const renderOrderbook = (assetType: 'flop' | 'hype') => (
     <div className="flex flex-col gap-4">
       <h2 className="text-xl font-semibold text-center capitalize">{assetType}</h2>
@@ -235,89 +220,98 @@ export default function OrderbookPage() {
 
   return (
     <div className="min-h-screen flex bg-gray-100">
-      {/* Área principal */}
       <div className="flex-1 p-4">
         <h1 className="text-2xl font-bold mb-6">Orderbook Completo</h1>
         <div className="mb-6 w-full max-w-md flex flex-col gap-4">
           <div className="flex gap-4">
             <select
-              value={execution}
-              onChange={(e) => setExecution(e.target.value as 'limit' | 'market')}
-              className="border p-2 rounded-lg"
-            >
-              <option value="limit">Ordem Limite</option>
-              <option value="market">Ordem a Mercado</option>
-            </select>
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value as 'buy' | 'sell')}
-              className="border p-2 rounded-lg"
-            >
-              <option value="buy">Compra</option>
-              <option value="sell">Venda</option>
-            </select>
-            <select
               value={asset}
               onChange={(e) => setAsset(e.target.value as 'flop' | 'hype')}
-              className="border p-2 rounded-lg"
+              className="flex-1 px-3 py-2 border rounded"
             >
               <option value="flop">Flop</option>
               <option value="hype">Hype</option>
             </select>
+            <select
+              value={execution}
+              onChange={(e) => setExecution(e.target.value as 'limit' | 'market')}
+              className="flex-1 px-3 py-2 border rounded"
+            >
+              <option value="limit">Limite</option>
+              <option value="market">Mercado</option>
+            </select>
           </div>
-          {execution === 'limit' && (
-            <input
-              type="number"
-              value={price}
-              onChange={(e) => setPrice(e.target.value)}
-              placeholder="Preço (entre 0 e 1)"
-              className="border p-2 rounded-lg"
-            />
-          )}
+          <input
+            type="number"
+            value={price}
+            onChange={(e) => setPrice(e.target.value)}
+            placeholder="Preço"
+            className="w-full px-3 py-2 border rounded"
+            disabled={execution === 'market'}
+          />
           <input
             type="number"
             value={quantity}
             onChange={(e) => setQuantity(e.target.value)}
-            placeholder={
-              execution === 'limit'
-                ? type === 'buy'
-                  ? "Montante"
-                  : "Shares"
-                : type === 'buy'
-                  ? "Montante"
-                  : "Shares"
-            }
-            className="border p-2 rounded-lg"
+            placeholder="Quantidade"
+            className="w-full px-3 py-2 border rounded"
           />
-          <button
-            onClick={handleAddOrder}
-            className="bg-blue-600 text-white p-2 rounded-lg hover:bg-blue-700"
-          >
-            Adicionar Ordem
-          </button>
-          {error && <div className="text-red-600">{error}</div>}
+          <div className="flex gap-4">
+            <button
+              onClick={() => {
+                setType('buy');
+                handleAddOrder();
+              }}
+              className="bg-blue-500 text-white px-4 py-2 rounded"
+            >
+              Comprar
+            </button>
+            <button
+              onClick={() => {
+                setType('sell');
+                handleAddOrder();
+              }}
+              className="bg-red-500 text-white px-4 py-2 rounded"
+            >
+              Vender
+            </button>
+          </div>
+          {error && <p className="text-red-500">{error}</p>}
+          <div>
+            {marketResult && (
+              <div>
+                <h4>Resultado da Ordem a Mercado:</h4>
+                <p>Shares: {marketResult.totalShares}</p>
+                <p>Preço Final: R$ {marketResult.priceFinal}</p>
+                {marketResult.priceImpact && (
+                  <p>Impacto no Preço: {marketResult.priceImpact}%</p>
+                )}
+              </div>
+            )}
+          </div>
+          <div>
+            {executionResult && (
+              <div>
+                <h4>Resultado da Ordem Limite:</h4>
+                <p>ID da Ordem: {executionResult.newOrderId}</p>
+                <p>Shares Executadas: {executionResult.executedShares}</p>
+                <p>Preço Médio: R$ {executionResult.averagePrice}</p>
+                <p>Ordem Remanescente: {executionResult.remainingOrder ? 'Sim' : 'Não'}</p>
+              </div>
+            )}
+          </div>
         </div>
-        {/* Grid: Hype à esquerda e Flop à direita */}
-        <div className="grid grid-cols-2 gap-6 w-full max-w-4xl">
-          {renderOrderbook('hype')}
-          {renderOrderbook('flop')}
-        </div>
+        <h3 className="font-semibold">Histórico de Ordens:</h3>
+        <ul>
+          {history.map((msg, idx) => (
+            <li key={idx} className="text-sm">{msg}</li>
+          ))}
+        </ul>
       </div>
-
-      {/* Área de Histórico de Execução (sidebar à direita) */}
-      <div className="w-1/3 p-4 border-l border-gray-300 overflow-y-auto">
-        <h2 className="text-xl font-bold mb-4">Histórico de Execução</h2>
-        {history.length === 0 ? (
-          <p className="text-gray-500">Sem histórico para exibir.</p>
-        ) : (
-          <ul className="space-y-2">
-            {history.map((msg, index) => (
-              <li key={index} className="p-2 bg-white rounded shadow">
-                {msg}
-              </li>
-            ))}
-          </ul>
-        )}
+      {/* Renderização do Orderbook */}
+      <div className="w-80 p-4 bg-white rounded-lg shadow-md mx-auto">
+        {renderOrderbook('flop')}
+        {renderOrderbook('hype')}
       </div>
     </div>
   );

@@ -1,17 +1,8 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001";
-
-interface BackendOrder {
-  id: number;
-  type: "buy" | "sell";
-  asset: "HYPE" | "FLOP";
-  price: number;
-  amount: number;
-  shares: number;
-}
 
 interface Trade {
   buyOrderId?: number;
@@ -30,8 +21,8 @@ interface MatchingResult {
 export default function OrderbookPage() {
   const [price, setPrice] = useState("");
   const [quantity, setQuantity] = useState("");
-  const [type, setType] = useState<"buy" | "sell">("buy");
-  const [asset, setAsset] = useState<"hype" | "flop">("flop");
+  const [type] = useState<"buy" | "sell">("buy"); // Removido setType
+  const [asset] = useState<"hype" | "flop">("flop"); // Removido setAsset
   const [error, setError] = useState<string | null>(null);
   const [executionResult, setExecutionResult] = useState<MatchingResult | null>(
     null

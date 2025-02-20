@@ -29,6 +29,10 @@ interface MatchingResult {
   remainingOrder: BackendOrder | null;
 }
 
+interface ErrorResponse {
+  error: string;
+}
+
 export default function OrderbookPage() {
   const [orders, setOrders] = useState<BackendOrder[]>([]);
   const [price, setPrice] = useState('');
@@ -86,18 +90,22 @@ export default function OrderbookPage() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
         });
-        const result: MatchingResult = await response.json();
+        const result: MatchingResult | ErrorResponse = await response.json();
         if (!response.ok) {
-          setError(result.error || 'Erro ao adicionar ordem.');
+          if ('error' in result) {
+            setError(result.error);
+          } else {
+            setError('Erro ao adicionar ordem.');
+          }
           return;
         }
         fetchOrders();
 
-        if (result.trades) {
-          setExecutionResult(result);
+        if (result.hasOwnProperty('trades')) {
+          setExecutionResult(result as MatchingResult);
           let msg = `Matching: Ordem ${result.newOrderId} executada, ${result.executedShares} shares a preço médio R$ ${result.averagePrice}.`;
-          if (result.trades.length > 0) {
-            msg += " Trades: " + result.trades
+          if ((result as MatchingResult).trades.length > 0) {
+            msg += " Trades: " + (result as MatchingResult).trades
               .map((trade) =>
                 trade.sellOrderId
                   ? `Venda ${trade.sellOrderId}: ${trade.executedShares} @ ${trade.price}`
@@ -107,8 +115,8 @@ export default function OrderbookPage() {
           }
           setHistory(prev => [...prev, msg]);
 
-          if (result.remainingOrder) {
-            const remMsg = `Ordem remanescente inserida: ID ${result.remainingOrder.id}, ${result.remainingOrder.shares} shares a R$ ${result.remainingOrder.price}.`;
+          if ((result as MatchingResult).remainingOrder) {
+            const remMsg = `Ordem remanescente inserida: ID ${(result as MatchingResult).remainingOrder.id}, ${(result as MatchingResult).remainingOrder.shares} shares a R$ ${(result as MatchingResult).remainingOrder.price}.`;
             setHistory(prev => [...prev, remMsg]);
           }
         } else {
@@ -256,50 +264,15 @@ export default function OrderbookPage() {
             placeholder="Quantidade"
             className="w-full px-3 py-2 border rounded"
           />
-          <div className="flex gap-4">
-            <button
-              onClick={() => {
-                setType('buy');
-                handleAddOrder();
-              }}
-              className="bg-blue-500 text-white px-4 py-2 rounded"
-            >
-              Comprar
-            </button>
-            <button
-              onClick={() => {
-                setType('sell');
-                handleAddOrder();
-              }}
-              className="bg-red-500 text-white px-4 py-2 rounded"
-            >
-              Vender
-            </button>
-          </div>
-          {error && <p className="text-red-500">{error}</p>}
           <div>
-            {marketResult && (
-              <div>
-                <h4>Resultado da Ordem a Mercado:</h4>
-                <p>Shares: {marketResult.totalShares}</p>
-                <p>Preço Final: R$ {marketResult.priceFinal}</p>
-                {marketResult.priceImpact && (
-                  <p>Impacto no Preço: {marketResult.priceImpact}%</p>
-                )}
-              </div>
-            )}
+            {error && <div className="text-red-500 text-sm">{error}</div>}
           </div>
-          <div>
-            {executionResult && (
-              <div>
-                <h4>Resultado da Ordem Limite:</h4>
-                <p>ID da Ordem: {executionResult.newOrderId}</p>
-                <p>Shares Executadas: {executionResult.executedShares}</p>
-                <p>Preço Médio: R$ {executionResult.averagePrice}</p>
-                <p>Ordem Remanescente: {executionResult.remainingOrder ? 'Sim' : 'Não'}</p>
-              </div>
-            )}
-          </div>
+          <button
+            onClick={handleAddOrder}
+            className="px-4 py-2 bg-blue-500 text-white rounded mt-4"
+          >
+            Adicionar Ordem
+          </button>
         </div>
         <h3 className="font-semibold">Histórico de Ordens:</h3>
         <ul>
@@ -308,7 +281,6 @@ export default function OrderbookPage() {
           ))}
         </ul>
       </div>
-      {/* Renderização do Orderbook */}
       <div className="w-80 p-4 bg-white rounded-lg shadow-md mx-auto">
         {renderOrderbook('flop')}
         {renderOrderbook('hype')}

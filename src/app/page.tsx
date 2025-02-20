@@ -18,6 +18,7 @@ interface MarketOrderResult {
   totalShares?: number;
   priceFinal?: number;
   priceImpact?: number;
+  totalRevenue?: number;
   error?: string;
 }
 
@@ -37,6 +38,8 @@ export default function OrderbookPage() {
   const [orders, setOrders] = useState<BackendOrder[]>([]);
   const [price, setPrice] = useState('');
   const [quantity, setQuantity] = useState('');
+  // Como não utilizamos a função de atualização, extraímos apenas o valor
+  const [type] = useState<'buy' | 'sell'>('buy');
   const [asset, setAsset] = useState<'flop' | 'hype'>('flop');
   const [execution, setExecution] = useState<'limit' | 'market'>('limit');
   const [error, setError] = useState<string | null>(null);
@@ -67,13 +70,14 @@ export default function OrderbookPage() {
         return;
       }
 
-      const endpoint = 'buy' || 'sell'; // Ajuste condicional para o tipo da ordem
+      // Define o endpoint baseado no tipo da ordem (buy ou sell)
+      const endpoint = type === 'buy' ? 'buy' : 'sell';
       const payload: Record<string, unknown> = {
         asset: asset.toUpperCase(),
         price: numericPrice,
       };
 
-      if (endpoint === 'buy') {
+      if (type === 'buy') {
         payload['amount'] = numericQuantity;
       } else {
         payload['shares'] = numericQuantity;
@@ -104,9 +108,11 @@ export default function OrderbookPage() {
     } else if (execution === 'market') {
       const numericValue = parseFloat(quantity);
       if (isNaN(numericValue)) {
-        setError(type === 'buy'
-          ? 'Montante deve ser um número válido.'
-          : 'Quantidade de shares deve ser um número válido.');
+        setError(
+          type === 'buy'
+            ? 'Montante deve ser um número válido.'
+            : 'Quantidade de shares deve ser um número válido.'
+        );
         return;
       }
       let endpoint = '';
@@ -233,9 +239,7 @@ export default function OrderbookPage() {
             placeholder="Quantidade"
             className="w-full px-3 py-2 border rounded"
           />
-          <div>
-            {error && <div className="text-red-500 text-sm">{error}</div>}
-          </div>
+          {error && <div className="text-red-500 text-sm">{error}</div>}
           <button
             onClick={handleAddOrder}
             className="px-4 py-2 bg-blue-500 text-white rounded mt-4"

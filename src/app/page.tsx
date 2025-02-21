@@ -47,6 +47,7 @@ export default function OrderbookPage() {
 
   const fetchOrders = async () => {
     try {
+      console.log(API_BASE_URL)
       const response = await fetch(`${API_BASE_URL}/orders`);
       const data = await response.json();
       setOrders(data);

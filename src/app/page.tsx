@@ -84,6 +84,8 @@ export default function OrderbookPage() {
       }
 
       try {
+        console.log(API_BASE_URL)
+        console.log(`${API_BASE_URL}/${endpoint}`)
         const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },

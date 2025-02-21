@@ -38,8 +38,7 @@ export default function OrderbookPage() {
   const [orders, setOrders] = useState<BackendOrder[]>([]);
   const [price, setPrice] = useState('');
   const [quantity, setQuantity] = useState('');
-  // Como não utilizamos a função de atualização, extraímos apenas o valor
-  const [type] = useState<'buy' | 'sell'>('buy');
+  const [type, setType] = useState<'buy' | 'sell'>('buy'); // Agora permite atualização
   const [asset, setAsset] = useState<'flop' | 'hype'>('flop');
   const [execution, setExecution] = useState<'limit' | 'market'>('limit');
   const [error, setError] = useState<string | null>(null);
@@ -47,7 +46,7 @@ export default function OrderbookPage() {
 
   const fetchOrders = async () => {
     try {
-      console.log(API_BASE_URL)
+      console.log(API_BASE_URL);
       const response = await fetch(`${API_BASE_URL}/orders`);
       const data = await response.json();
       setOrders(data);
@@ -85,8 +84,8 @@ export default function OrderbookPage() {
       }
 
       try {
-        console.log(API_BASE_URL)
-        console.log(`${API_BASE_URL}/${endpoint}`)
+        console.log(API_BASE_URL);
+        console.log(`${API_BASE_URL}/${endpoint}`);
         const response = await fetch(`${API_BASE_URL}/${endpoint}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -209,7 +208,16 @@ export default function OrderbookPage() {
       <div className="flex-1 p-4">
         <h1 className="text-2xl font-bold mb-6">Orderbook Completo</h1>
         <div className="mb-6 w-full max-w-md flex flex-col gap-4">
+          {/* Nova caixa de seleção para escolher o tipo de ordem */}
           <div className="flex gap-4">
+            <select
+              value={type}
+              onChange={(e) => setType(e.target.value as 'buy' | 'sell')}
+              className="flex-1 px-3 py-2 border rounded"
+            >
+              <option value="buy">Compra</option>
+              <option value="sell">Venda</option>
+            </select>
             <select
               value={asset}
               onChange={(e) => setAsset(e.target.value as 'flop' | 'hype')}

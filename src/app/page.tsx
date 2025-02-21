@@ -204,7 +204,10 @@ export default function OrderbookPage() {
   );
 
   return (
-    <div className="min-h-screen flex bg-gray-100">
+    <div
+      className="min-h-screen flex bg-gray-100"
+      style={{ fontFamily: 'Arial, sans-serif', color: 'black' }}
+    >
       <div className="flex-1 p-4">
         <h1 className="text-2xl font-bold mb-6">Orderbook Completo</h1>
         <div className="mb-6 w-full max-w-md flex flex-col gap-4">
@@ -250,10 +253,10 @@ export default function OrderbookPage() {
             placeholder="Quantidade"
             className="w-full px-3 py-2 border rounded"
           />
-          {error && <div className="text-red-500 text-sm">{error}</div>}
+          {error && <div className="text-sm">{error}</div>}
           <button
             onClick={handleAddOrder}
-            className="px-4 py-2 bg-blue-500 text-white rounded mt-4"
+            className="px-4 py-2 bg-blue-500 text-black rounded mt-4"
           >
             Adicionar Ordem
           </button>
